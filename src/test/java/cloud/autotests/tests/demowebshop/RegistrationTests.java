@@ -7,6 +7,8 @@ import cloud.autotests.utils.TestDataGenerationUtils;
 import com.codeborne.selenide.Configuration;
 import com.github.javafaker.Faker;
 import io.restassured.RestAssured;
+import io.restassured.http.ContentType;
+import io.restassured.response.Response;
 import org.junit.jupiter.api.*;
 import org.openqa.selenium.Cookie;
 
@@ -29,8 +31,6 @@ public class RegistrationTests extends TestBase {
             password;
 
     final String tokenName = "__RequestVerificationToken";
-    final String tokenHeader = "MNp6ZQ-3YCxUU2D0Nu2QNiWgd7WQ1bKaNGY8gxxKghDsCf1UIG-FljYtEI4vGWPSBUv9y3nAllGk2g9nszCAvNwgGOnyDH9-JLzFHp3UhiY1";
-    final String tokenValue = "KNx5vsWGQx8jdZsjTDqXT8_caoY-fhBoR3iiVKsaIaHd8SNQy-8SpTw2bGvmpa3JgvjGELEDPiUmI_f-UDmixNko8uDTcJaF51D47kOtB8c1";
     final String authCookieName = "NOPCOMMERCE.AUTH";
 
 
@@ -102,6 +102,20 @@ public class RegistrationTests extends TestBase {
     }
 
     private String userRegistration(String authCookieName) {
+
+        Response register = given()
+                .filter(AllureRestAssuredFilter.withCustomTemplates())
+                .contentType(ContentType.JSON)
+                .log().all()
+                .when()
+                .get("/register")
+                .then()
+                .log().all()
+                .extract()
+                .response();
+
+        String token = register.htmlPath().getString("**.find{it.@name == '__RequestVerificationToken'}.@value");
+
         String authorizationCookie =
                 given()
                         .filter(AllureRestAssuredFilter.withCustomTemplates())
@@ -112,8 +126,8 @@ public class RegistrationTests extends TestBase {
                         .formParam("Email", email)
                         .formParam("Password", password)
                         .formParam("ConfirmPassword", password)
-                        .formParam(tokenName, tokenValue)
-                        .cookie(tokenName, tokenHeader)
+                        .formParam(tokenName, token)
+                        .cookies(register.cookies())
                         .when()
                         .post("/register")
                         .then()
